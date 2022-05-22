@@ -8,9 +8,10 @@
 
 int Ncust;
 unsigned int seed;
-int *seatArray;
+int *seatArrayA;
+int *seatArrayB;
 int pay_chance = 0;
-int zone_chance = 0;
+//int zone_chance = 0;
 int ticketcost = 0 ;
 int balance = 0;
 int id_transaction = 0;
@@ -39,26 +40,41 @@ int rndGen(int low,int high)
     return result;
 }
 
-// elegxos plirothtas theatrou. Nomizw prepei na to kanoyme ana zoni. Thn xrhsimopoioume pio meta gia to thread ticketFinder
-int _isFull(int tickets){
+// elegxos plirothtas kathe zonis
+int _isFullA(int tickets){
 
-    int count = SEATNUM + 1;
-    for(int i = 0; i < SEATNUM; i++){
-        if(seatArray[i] == 0){
+    int count = SEATNUMZA + 1;
+    for(int i = 0; i < SEATNUMZA; i++){
+        if(seatArrayA[i] == 0){
             count = i;
             break;
         }
     }
 
-    if((count + tickets) <= SEATNUM){
+    if((count + tickets) <= SEATNUMZA){
         return count;
     }
     else {
         return -1;
     }
-
 }
 
+int _isFullB(int tickets){
+
+    int count = SEATNUMZB + 1;
+    for(int i = 0; i < SEATNUMZB; i++){
+        if(seatArrayB[i] == 0){
+            count = i;
+            break;
+        }
+    }
+    if((count + tickets) <= SEATNUMZB){
+        return count;
+    }
+    else {
+        return -1;
+    }
+}
 
 void *customerServe(void *threadId) {
 
@@ -475,21 +491,30 @@ int main(int argc, char *argv[]) {
         printf("ERROR: the number of seed should be a positive number. Current number given %d.\n", seed);
         exit(-1);
     }
-    if (Ncust < 0) {
+    if (Ncust <= 0 ) {
         printf("ERROR: the number of customers should be a positive number. Current number given %d.\n", Ncust);
         exit(-1);
     }
 
-    // initialize seats
-    seatArray = (int *)malloc(sizeof(int) * SEATNUM);
+    // seats for zone A
+    seatArrayA = (int *)malloc(sizeof(int) * SEATNUMZA);
     //elegxos an apetyxe i malloc alla mallon prepei na ginei ana zoni pali
-    if (seatArray == NULL) {
-        printf("ERROR: Malloc (seatArray) failed not enough memory!\n");
+    if (seatArrayA == NULL) {
+        printf("ERROR: Malloc (seatArrayA) failed not enough memory!\n");
         return -1;
     }
     //Array initialization , all elements should be 0 means all seats are free, for now
-    for(int i = 0; i < SEATNUM; i++) {
-        seatArray[i]=0;
+    for(int i = 0; i < SEATNUMZA; i++) {
+        seatArrayA[i]=0;
+    }
+    //  seats for zone B
+    seatArrayB = (int *)malloc(sizeof(int) * SEATNUMZB);
+    if (seatArrayB == NULL) {
+        printf("ERROR: Malloc (seatArrayB) failed not enough memory!\n");
+        return -1;
+    }
+    for(int i = 0; i < SEATNUMZB; i++) {
+        seatArrayB[i]=0;
     }
 
     rc = pthread_mutex_init(&TelCounter, NULL);
@@ -497,37 +522,31 @@ int main(int argc, char *argv[]) {
         printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_init(&addToBalance, NULL);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_init(&ticketFinder, NULL);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_init(&PrintMutex, NULL);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_init(&timeMutex, NULL);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
         exit(-1);
     }
-
     rc= pthread_cond_init(&thresholdCond, NULL);
     if (rc!=0){
         printf("ERROR: return code from pthread_cond_init() is %d\n", rc);
         exit(-1);
     }
-
 
     pthread_t *threads = malloc(sizeof(pthread_t) * Ncust);
     if (threads == NULL) {
@@ -545,7 +564,8 @@ int main(int argc, char *argv[]) {
             exit(-1);
         }
     }
-    //the end, delete costumer threads
+
+    //the end, wait for costumer threads to end
     void *status;
     for (int i = 0; i < Ncust; i++) {
         rc = pthread_join(threads[i], &status);
@@ -557,9 +577,12 @@ int main(int argc, char *argv[]) {
 
     }
 
-
-    for (int i = 0; i < SEATNUM; i++) {
-        printf("seatArray[%d] = %d.\n", i, *(seatArray + i));
+    // ?????
+    for (int i = 0; i < SEATNUMZA; i++) {
+        printf("seatArrayA[%d] = %d.\n", i, *(seatArrayA + i));
+    }
+    for (int i = 0; i < SEATNUMZB; i++) {
+        printf("seatArrayB[%d] = %d.\n", i, *(seatArrayB + i));
     }
 
     printf("The balance is: %d\n",balance);										//Plano thesewn
@@ -573,38 +596,31 @@ int main(int argc, char *argv[]) {
         printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_destroy(&CashCounter);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_destroy(&addToBalance);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_destroy(&ticketFinder);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_destroy(&PrintMutex);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
-
     rc = pthread_mutex_destroy(&timeMutex);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
-
-
     rc = pthread_cond_destroy(&thresholdCond);
     if (rc != 0) {
         printf("ERROR: return code from pthread_cond_destroy() is %d\n", rc);
@@ -613,7 +629,8 @@ int main(int argc, char *argv[]) {
 
 
     free(threads);
-    free(seatArray);
+    free(seatArrayA);
+    free(seatArrayB);
 
 
     return 1;
