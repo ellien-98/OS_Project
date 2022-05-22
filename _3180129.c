@@ -15,7 +15,8 @@ int pay_chance = 0;
 int ticketcost = 0 ;
 int balance = 0;
 int id_transaction = 0;
-double waitingTime = 0;
+double waitingTime = 0;     //mesos xronos anamonhs
+double completionTime = 0;  //mesos xronos eksipirethshs pelaton
 int currentTelInUse = 0;
 int currentCashInUse = 0;
 double assistanceTime = 0;
@@ -28,10 +29,23 @@ pthread_mutex_t ticketFinder;
 pthread_mutex_t addToBalance;
 pthread_mutex_t PrintMutex;
 pthread_mutex_t timeMutex;
+pthread_mutex_t seatsAMutex;
+pthread_mutex_t seatsBMutex;
 
-pthread_cond_t thresholdCond;
 
 
+pthread_cond_t telThresholdCond;
+pthread_cond_t cashThresholdCond;
+pthread_cond_t ticketThresholdCond;
+pthread_cond_t balanceThresholdCond;
+pthread_cond_t printThresholdCond;
+pthread_cond_t timeThresholdCond;
+pthread_cond_t seatsAThresholdCond;
+pthread_cond_t seatsBThresholdCond;
+
+
+
+//probably not necessary
 int rndGen(int low,int high)
 {
     int result ;    //first seed the random number generator
@@ -76,44 +90,46 @@ int _isFullB(int tickets){
     }
 }
 
-void *customerServe(void *threadId) {
-
+void *customerServe(void *tId) {
+    // struct contains two member variables:
+    // tv_sec – The variable of the time_t type made to store time in seconds.
+    // tv_nsec – The variable of the long type used to store time in nanoseconds.
     struct timespec start, stop;
     struct timespec start2, stop2;
     int rndSeats;
     //int rndZone;
     int rndSecTel;
     int rndSecCash;
+    int *threadId = (int *)tId;
     int rc;
 
-    /* MUTEX 0 */
+    // begin the clock to count time
+    clock_gettime(CLOCK_REALTIME, &start);
+
+    /* MUTEX 0 */ //????????????
     rc = pthread_mutex_lock(&timeMutex);
     if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_lock() is %d\n", rc);
+        printf("ERROR: return code from timemutex_lock() is %d\n", rc);
         pthread_exit(&rc);
     }
-
     if( clock_gettime( CLOCK_REALTIME, &start) == -1 ) {
         perror( "clock gettime" );
         exit( EXIT_FAILURE );
     }
-
     rc = pthread_mutex_unlock(&timeMutex);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_unlock() is %d\n", rc);
         pthread_exit(&rc);
-    }
+    }       //?????????????
 
 
-    /* MUTEX 1 */
+    /* tel mutex */
     rc = pthread_mutex_lock(&TelCounter);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_lock() is %d\n", rc);
         pthread_exit(&rc);
     }
-
-
-    while(currentTelInUse>=TEL){
+    while(currentTelInUse>=NTEL){
         printf("Currently waiting for the first available Telephonist, please wait, %d ---\n", currentTelInUse);
 
         rc= pthread_cond_wait(&thresholdCond ,&TelCounter);
@@ -191,7 +207,7 @@ void *customerServe(void *threadId) {
     }
 
 
-    while(currentCashInUse>=CASH){
+    while(currentCashInUse>=NCASH){
         printf("Currently waiting for the first available Cashier, please wait, %d ---\n", currentCashInUse);
 
         rc= pthread_cond_wait(&thresholdCond ,&CashCounter);
@@ -498,7 +514,6 @@ int main(int argc, char *argv[]) {
 
     // seats for zone A
     seatArrayA = (int *)malloc(sizeof(int) * SEATNUMZA);
-    //elegxos an apetyxe i malloc alla mallon prepei na ginei ana zoni pali
     if (seatArrayA == NULL) {
         printf("ERROR: Malloc (seatArrayA) failed not enough memory!\n");
         return -1;
@@ -519,32 +534,32 @@ int main(int argc, char *argv[]) {
 
     rc = pthread_mutex_init(&TelCounter, NULL);
     if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
+        printf("ERROR: return code from pthread_mutex_init() (TelCounter) is %d\n", rc);
         exit(-1);
     }
     rc = pthread_mutex_init(&addToBalance, NULL);
     if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
+        printf("ERROR: return code from pthread_mutex_init() (addToBalance) is %d\n", rc);
         exit(-1);
     }
     rc = pthread_mutex_init(&ticketFinder, NULL);
     if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
+        printf("ERROR: return code from pthread_mutex_init() (ticketFinder) is %d\n", rc);
         exit(-1);
     }
     rc = pthread_mutex_init(&PrintMutex, NULL);
     if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
+        printf("ERROR: return code from pthread_mutex_init() (PrintMutex) is %d\n", rc);
         exit(-1);
     }
     rc = pthread_mutex_init(&timeMutex, NULL);
     if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
+        printf("ERROR: return code from pthread_mutex_init() (timeMutex) is %d\n", rc);
         exit(-1);
     }
     rc= pthread_cond_init(&thresholdCond, NULL);
     if (rc!=0){
-        printf("ERROR: return code from pthread_cond_init() is %d\n", rc);
+        printf("ERROR: return code from pthread_cond_init() (thresholdCond) is %d\n", rc);
         exit(-1);
     }
 
