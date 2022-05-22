@@ -6,7 +6,7 @@
 #include <time.h>
 #include "cmake-build-debug/_3180129.h"
 
-int customers;
+int Ncust;
 unsigned int seed;
 int *seatArray;
 int pay_chance = 0;
@@ -33,8 +33,8 @@ pthread_cond_t thresholdCond;
 
 int rndGen(int low,int high)
 {
-    int result ;
-    srand(time(NULL));
+    int result ;    //first seed the random number generator
+    srand(seed);
     result= ( (rand() % (high+1-low) ) + low );
     return result;
 }
@@ -43,7 +43,6 @@ int rndGen(int low,int high)
 int _isFull(int tickets){
 
     int count = SEATNUM + 1;
-
     for(int i = 0; i < SEATNUM; i++){
         if(seatArray[i] == 0){
             count = i;
@@ -250,7 +249,7 @@ void *customerServe(void *threadId) {
     int count = _isFull(rndSeats);
     if(count != -1){
 
-        srand(time(NULL));
+        srand(seed);
         pay_chance = rand()% 100;
         printf("This is the chance you get.. %d %%\n", pay_chance);
         if (pay_chance = 10){ //!!!!!
@@ -462,35 +461,30 @@ void *customerServe(void *threadId) {
 int main(int argc, char *argv[]) {
 
     int rc;
-
-
     //Checks if user gave the correct input
     if (argc != 3) {
         printf("ERROR: the program should take two arguments, the number of customers to create and the seed number!\n");
         exit(0);
     }
-
-    customers = atoi(argv[1]);
+    // convert input char* to int
+    Ncust = atoi(argv[1]);
     seed = atoi(argv[2]);
 
-
-    //Checks if the value is a positive number, otherwise end program
-    if (customers < 0) {
-        printf("ERROR: the number of customers to run should be a positive number. Current number given %d.\n", customers);
-        exit(-1);
-    }
+    //Check if the input values are positive numbers, otherwise end program
     if (seed < 0) {
-        printf("ERROR: the number of seed to run should be a positive number. Current number given %d.\n", seed);
+        printf("ERROR: the number of seed should be a positive number. Current number given %d.\n", seed);
+        exit(-1);
+    }
+    if (Ncust < 0) {
+        printf("ERROR: the number of customers should be a positive number. Current number given %d.\n", Ncust);
         exit(-1);
     }
 
-    printf("Main: We will create %d threads for each customer.\n", customers);
-
-
+    // initialize seats
     seatArray = (int *)malloc(sizeof(int) * SEATNUM);
     //elegxos an apetyxe i malloc alla mallon prepei na ginei ana zoni pali
     if (seatArray == NULL) {
-        printf("ERROR: Calloc failed not enough memory!\n");
+        printf("ERROR: Malloc (seatArray) failed not enough memory!\n");
         return -1;
     }
     //Array initialization , all elements should be 0 means all seats are free, for now
@@ -498,16 +492,9 @@ int main(int argc, char *argv[]) {
         seatArray[i]=0;
     }
 
-
     rc = pthread_mutex_init(&TelCounter, NULL);
     if (rc != 0) {
         printf("ERROR: return code from pthread_mutex_init() is %d\n", rc);
-        exit(-1);
-    }
-
-    rc = pthread_mutex_destroy(&CashCounter);
-    if (rc != 0) {
-        printf("ERROR: return code from pthread_mutex_destroy() is %d\n", rc);
         exit(-1);
     }
 
@@ -542,26 +529,25 @@ int main(int argc, char *argv[]) {
     }
 
 
-    pthread_t *threads = malloc(sizeof(pthread_t) * customers);
-    int threadIds[customers];
+    pthread_t *threads = malloc(sizeof(pthread_t) * Ncust);
     if (threads == NULL) {
-        printf("ERROR: Failed to allocate threads , not enough memory!\n");
+        printf("ERROR: Failed to allocate threads, not enough memory!\n");
         return -1;
     }
-
-    for (int i = 0; i < customers; i++) {
-        threadIds[i] = i + 1;
-
+    printf("Main: Creating %d threads, one for each customer.\n", Ncust);
+    int threadIds[Ncust];
+    for (int i = 0; i < Ncust; i++) {
+        threadIds[i] = i;
+        //MARIA MOU edw sto allaksa evala i anti gia i+1, IDKW
         rc = pthread_create(&threads[i], NULL, customerServe, &threadIds[i]);
-
         if (rc != 0) {
             printf("ERROR: return code from pthread_create() is %d\n", rc);
             exit(-1);
         }
     }
-
+    //the end, delete costumer threads
     void *status;
-    for (int i = 0; i < customers; i++) {
+    for (int i = 0; i < Ncust; i++) {
         rc = pthread_join(threads[i], &status);
 
         if (rc != 0) {
@@ -576,10 +562,10 @@ int main(int argc, char *argv[]) {
         printf("seatArray[%d] = %d.\n", i, *(seatArray + i));
     }
 
-    printf("The balance is: %d\n",balance);														//Plano thesewn
-    printf("Total transactions: %d\n",id_transaction);											//Sunolika Esoda
-    printf("Average waiting Time: %f\n",waitingTime/customers);									//Mesos xronos anamwnhs pelatwn
-    printf("Average serving: %f\n",assistanceTime/customers);									//mesos xronos ejhpiretisis pelatwn
+    printf("The balance is: %d\n",balance);										//Plano thesewn
+    printf("Total transactions: %d\n",id_transaction);							//Sunolika Esoda
+    printf("Average waiting Time: %f\n",waitingTime/Ncust);					//Mesos xronos anamwnhs pelatwn
+    printf("Average serving: %f\n",assistanceTime/Ncust);					//mesos xronos ejhpiretisis pelatwn
 
 
     rc = pthread_mutex_destroy(&TelCounter);
