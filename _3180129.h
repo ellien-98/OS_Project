@@ -1,4 +1,3 @@
-
 #pragma once
 
 
@@ -13,10 +12,12 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define SEATNUM 3000 				//total seats
-#define LINES_ZONE_A 10
-#define LINES_ZONE_B 20
-#define SEATS_PER_LINE 10
+#define SEATNUMTOTAL 300 				//total seats
+#define SEATNUMZA   100        //number of seats for zone A and B
+#define SEATNUMZB   200       // NzoneA * 10 = 10*10= 100, NzoneB * 10 = 20*10 = 200
+#define NzoneA 10       //seires sth mprosta zoni
+#define NzoneB 20       //seires sth pisw zoni
+#define Nseat 10        //theseis ana seira
 #define TEL 3						//Telephonist
 #define CASH 2						//Cashier
 #define PZONE_A 30					//Possibility of choosing zone A
@@ -28,9 +29,9 @@
 #define T_SEAT_HIGH 13
 #define T_CASH_LOW 4				//random sec of cashier to check payment
 #define T_CASH_HIGH 8
-#define P_CARDSUCCESS 90				//possibility of payment done
-#define SEATCOST_A 30				//cost of seats zone a
-#define SEATCOST_B 20				//cost of seats zone b
+#define Pcardsuccess 90				//possibility of payment done
+#define CzoneA 30				//cost of seats zone a
+#define CzoneB 20				//cost of seats zone b
 #define BILLION  1000000000L;
 
 
