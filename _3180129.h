@@ -18,8 +18,8 @@
 #define NzoneA 10       //seires sth mprosta zoni
 #define NzoneB 20       //seires sth pisw zoni
 #define Nseat 10        //theseis ana seira
-#define TEL 3						//Telephonist
-#define CASH 2						//Cashier
+#define NTEL 3						//Telephonist
+#define NCASH 2						//Cashier
 #define PZONE_A 30					//Possibility of choosing zone A
 #define N_SEAT_LOW 1				//random number of tickets
 #define N_SEAT_HIGH 5
