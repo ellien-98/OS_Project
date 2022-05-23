@@ -9,6 +9,7 @@
 
 int Ncust;
 unsigned int seed;
+int rc;
 int *seatArrayA;
 int *seatArrayB;
 int pay_chance = 0;
@@ -23,8 +24,9 @@ double totalSupportTime = 0;  //mesos xronos eksipirethshs pelaton
 int currentTelInUse = 0;
 int currentCashInUse = 0;
 double assistanceTime = 0;
+int isProcessingSeatsStarted = 0;
+int isProcessingSeatsFinished = 0;
 int isProcessingSeats = 0;
-
 
 
 pthread_mutex_t TelCounter;
@@ -35,7 +37,8 @@ pthread_mutex_t PrintMutex;
 
 pthread_mutex_t ticketFinder;
 pthread_mutex_t addToBalance;
-pthread_mutex_t timeMutex;
+pthread_mutex_t waitingTimeMutex;
+pthread_mutex_t supportTimeMutex;
 
 
 
@@ -130,7 +133,12 @@ int isFullB(int tickets){
 }
  */
 
-int reserveSeatsZA(int tickets, int tId){
+int reserveSeatsZA(int tickets, void *tId){
+    rc = pthread_mutex_lock(&seatsAMutex);
+    if (rc != 0) {
+        printf("ERROR: return code from pthread_mutex_unlock(&seatsAMutex) is %d\n", rc);
+        pthread_exit(&rc);
+    }
     isProcessingSeats = 1;
     int seatsAvail = 0;
     //int custSeira = -1;
@@ -181,15 +189,27 @@ int reserveSeatsZA(int tickets, int tId){
             }
         }
     }
+    isProcessingSeats = 0;
+    rc = pthread_cond_broadcast(&seatsAThresholdCond);
+    if (rc != 0) {
+        printf("ERROR: return code from pthread_cond_broadcast(&seatsAThresholdCond) is %d\n", rc);
+        pthread_exit(&rc);
+    }
+    rc = pthread_mutex_unlock(&seatsAMutex);
+    if (rc != 0) {
+        printf("ERROR: return code from pthread_mutex_unlock(&seatsAMutex) is %d\n", rc);
+        pthread_exit(&rc);
+    }
+
 }
 
 void *customerServe(void *tId) {
     // struct contains two member variables:
     // tv_sec – The variable of the time_t type made to store time in seconds.
     // tv_nsec – The variable of the long type used to store time in nanoseconds.
-    struct timespec start, stop;
+    struct timespec start, telConnect, custCompleted; //stop for error stop, completed for successful reservation
     struct timespec custStopWait;
-    struct timespec start2, stop2;
+    struct timespec start2, stop2, stop;
     int rndSeats;
     //int rndZone;
     int rndSecTel;
@@ -235,9 +255,9 @@ void *customerServe(void *tId) {
     printf("An available telephonist is found for customer $d\n", *threadId);
     currentTelInUse++;
     // begin counting time the customer is being serviced - talking on the phone
-    clock_gettime(CLOCK_REALTIME, &custStopWait);
+    clock_gettime(CLOCK_REALTIME, &telConnect);
     // add this customer's waiting time until telephonist support, to total
-    totalWaitingTime = totalWaitingTime + (custStopWait.tv_nsec - start.tv_nsec);
+    totalWaitingTime = totalWaitingTime + (telConnect.tv_nsec - start.tv_nsec);
 
     rc = pthread_mutex_unlock(&TelCounter);
     if (rc != 0) {
@@ -294,41 +314,55 @@ void *customerServe(void *tId) {
         int rndSeatAvailTime = rndGen(T_SEAT_LOW,T_SEAT_HIGH);
         sleep(rndSeatAvailTime);    // thread goes sleeping for this time
 
-        rc = pthread_mutex_lock(&seatsAMutex);
-        if (rc != 0) {
-            printf("ERROR: return code from pthread_mutex_unlock(&seatsAMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
-        while (isProcessingSeats == 1) {
+        //avoid spurious wakeup
+        while (isProcessingSeatsStarted == 1) {
             printf("Another thread is processing the theater, please wait, (from thread %d)\n", *threadId);
             rc = pthread_cond_wait(&seatsAThresholdCond, &seatsAMutex);
             if (rc != 0) {
-                printf("ERROR: return code from pthread_cond_wait() is %d\n", rc);
+                printf("ERROR: return code from pthread_cond_wait(seatsAThresholdCond) is %d\n", rc);
                 pthread_exit(&rc);
             }
 
-            printf("increaseCount(): thread %d, the thread that will double the counter has started.\n",
-                   *threadId);
         }
-        if( reserveSeatsZA(rndSeats, *threadId) == -1 ){
-            printf("The seats in requested zone are sold out, goodbye\n");
+        if( reserveSeatsZA(rndSeats, (int *)threadId) == -1 ){
+            printf("The seats in zone A are sold out, goodbye\n");
+            clock_gettime(CLOCK_REALTIME, &custCompleted);
+            rc = pthread_mutex_lock(&supportTimeMutex);
+            if (rc != 0) {
+                printf("ERROR: return code from pthread_cond_wait(waitingTimeMutex) is %d\n", rc);
+                pthread_exit(&rc);
+            }
+            totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
+            rc = pthread_mutex_unlock(&supportTimeMutex);
+            if (rc != 0) {
+                printf("ERROR: return code from pthread_mutex_unlock(supportTimeMutex) is %d\n", rc);
+                pthread_exit(&rc);
+            }
         }
-        else if( reserveSeatsZA(rndSeats, *threadId) == -2 ){
+        else if( reserveSeatsZA(rndSeats, (int *)threadId) == -2 ){
             printf("The number of tickets you asked (%d) is not available in zone A, goodbye\n", rndSeats);
-        }
-        else if( reserveSeatsZA(rndSeats, *threadId) == 1 ){   //there are enough available seats
-            rc = pthread_mutex_unlock(&seatsAMutex);
+            clock_gettime(CLOCK_REALTIME, &custCompleted);
+            rc = pthread_mutex_lock(&supportTimeMutex);
             if (rc != 0) {
-                printf("ERROR: return code from pthread_mutex_unlock(&seatsAMutex) is %d\n", rc);
+                printf("ERROR: return code from pthread_cond_wait(waitingTimeMutex) is %d\n", rc);
                 pthread_exit(&rc);
             }
-            isProcessingSeats = 0;
-            rc = pthread_cond_broadcast(&seatsAThresholdCond);
+            totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
+            rc = pthread_mutex_unlock(&supportTimeMutex);
             if (rc != 0) {
-                printf("ERROR: return code from pthread_cond_broadcast(&seatsAThresholdCond) is %d\n", rc);
+                printf("ERROR: return code from pthread_mutex_unlock(supportTimeMutex) is %d\n", rc);
                 pthread_exit(&rc);
             }
         }
+        else if ( reserveSeatsZA(rndSeats, (int *)threadId) == 1 ){   //there are enough available seats
+            printf("The seats you requested are available");
+        }
+        rc = pthread_mutex_lock(&waitingTimeMutex);
+        if (rc != 0) {
+            printf("ERROR: return code from pthread_cond_wait(waitingTimeMutex) is %d\n", rc);
+            pthread_exit(&rc);
+        }
+
     }
     else{       //select zone B
 
