@@ -1,0 +1,6 @@
+# Vs Code 
+.vscode
+
+# Executables
+*.exe
+*.out
