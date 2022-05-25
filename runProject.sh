@@ -1,5 +1,5 @@
 #!/bin/bash
 
 echo "Running project"
-gcc -pthread -o _3180129.out _3180129.c
-./_3180129.out 10 100
+gcc -pthread -o 3200248_3150094_3180129.out 3200248_3150094_3180129.c
+./3200248_3150094_3180129.out 20 200
