@@ -92,7 +92,7 @@ int rndGen(int low, int high)
 int reserveSeatsZA(int tickets, void *tId)
 {
     int *id = (int *)tId;
-    int rc, i, j, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
+    int rc, i, j, k, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
 
     isProcessingSeats = 1;
     for (i = 0; i < NzoneA; i++)
@@ -145,7 +145,7 @@ int reserveSeatsZA(int tickets, void *tId)
 int reserveSeatsZB(int tickets, void *tId)
 {
     int *id = (int *)tId;
-    int rc, i, j, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
+    int rc, i, j, k, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
 
     isProcessingSeats = 1;
     for (i = 0; i < NzoneB; i++)
@@ -248,7 +248,7 @@ void *customerServe(void *tId)
         printf("ERROR: return code from pthread_mutex_unlock() is %d\n", rc);
         pthread_exit(&rc);
     }
-    rc = pthread_cond_broadcast(&telThresholdCond);  //broadcast or signal ?
+    rc = pthread_cond_signal(&telThresholdCond);  //broadcast or signal ?
     if (rc != 0)
     {
         printf("ERROR: return code from pthread_cond_signal(telThresholdCond) is %d\n", rc);
