@@ -248,7 +248,7 @@ void *customerServe(void *tId)
         printf("ERROR: return code from pthread_mutex_unlock() is %d\n", rc);
         pthread_exit(&rc);
     }
-    rc = pthread_cond_broadcast(&telThresholdCond);
+    rc = pthread_cond_broadcast(&telThresholdCond);  //broadcast or signal ?
     if (rc != 0)
     {
         printf("ERROR: return code from pthread_cond_signal(telThresholdCond) is %d\n", rc);
