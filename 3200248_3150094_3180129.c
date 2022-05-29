@@ -92,7 +92,7 @@ int rndGen(int low, int high)
 int reserveSeatsZA(int tickets, void *tId)
 {
     int *id = (int *)tId;
-    int rc, i, j, seatsAvail = 0, seatsCounter, startSeatPosition;
+    int rc, i, j, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
 
     isProcessingSeats = 1;
     for (i = 0; i < NzoneA; i++)
@@ -127,7 +127,7 @@ int reserveSeatsZA(int tickets, void *tId)
                     seatsCounter++;
                     if (seatsCounter == tickets)
                     {
-                        startSeatPosition = (j + 1) - tickets;
+                        startSeatPosition = (j + 1) - tickets; //dhlwsi k
                         for (int k = 0; k < tickets; k++)
                         {
                             newSeatArrayA[i][startSeatPosition + k] = *id;
@@ -145,7 +145,7 @@ int reserveSeatsZA(int tickets, void *tId)
 int reserveSeatsZB(int tickets, void *tId)
 {
     int *id = (int *)tId;
-    int rc, i, j, seatsAvail = 0, seatsCounter, startSeatPosition;
+    int rc, i, j, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
 
     isProcessingSeats = 1;
     for (i = 0; i < NzoneB; i++)
