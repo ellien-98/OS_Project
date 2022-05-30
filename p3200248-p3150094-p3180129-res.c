@@ -481,7 +481,11 @@ int main(int argc, char *argv[])
     assert(rc == 0);
 
     pthread_t *threads = malloc(sizeof(pthread_t) * Ncust);
-    assert(threads == NULL);
+    if (threads == NULL)
+    {
+        printf("ERROR: Failed to allocate threads, not enough memory!\n");
+        return -1;
+    }
     printf("Main: Creating %d threads, one for each customer.\n", Ncust);
     int threadIds[Ncust];
     for (int i = 0; i < Ncust; i++)
