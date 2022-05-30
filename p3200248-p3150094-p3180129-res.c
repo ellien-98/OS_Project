@@ -92,7 +92,7 @@ int rndGen(int low, int high)
 int reserveSeatsZA(int tickets, void *tId)
 {
     int *id = (int *)tId;
-    int rc, i, j, k, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
+    int rc, i, j, k, seatsAvail = 0, seatsCounter, startSeatPosition; // k;
 
     isProcessingSeats = 1;
     for (i = 0; i < NzoneA; i++)
@@ -127,7 +127,7 @@ int reserveSeatsZA(int tickets, void *tId)
                     seatsCounter++;
                     if (seatsCounter == tickets)
                     {
-                        startSeatPosition = (j + 1) - tickets; //dhlwsi k
+                        startSeatPosition = (j + 1) - tickets; // dhlwsi k
                         for (int k = 0; k < tickets; k++)
                         {
                             newSeatArrayA[i][startSeatPosition + k] = *id;
@@ -145,7 +145,7 @@ int reserveSeatsZA(int tickets, void *tId)
 int reserveSeatsZB(int tickets, void *tId)
 {
     int *id = (int *)tId;
-    int rc, i, j, k, seatsAvail = 0, seatsCounter, startSeatPosition; //k;
+    int rc, i, j, k, seatsAvail = 0, seatsCounter, startSeatPosition; // k;
 
     isProcessingSeats = 1;
     for (i = 0; i < NzoneB; i++)
@@ -225,6 +225,7 @@ void *customerServe(void *tId)
     { // avoid spurious wakeup
         printf("Currently waiting for the first available Telephonist, please wait, %d ---\n", currentTelInUse);
         rc = pthread_cond_wait(&telThresholdCond, &TelCounter);
+        assert(rc == 0);
     }
     printf("An available telephonist is found for customer %d\n", *threadId);
     currentTelInUse++;
@@ -235,8 +236,9 @@ void *customerServe(void *tId)
 
     currentTelInUse--;
     rc = pthread_mutex_unlock(&TelCounter);
+    assert(rc == 0);
 
-    rc = pthread_cond_signal(&telThresholdCond);  //broadcast or signal ?
+    rc = pthread_cond_signal(&telThresholdCond); // broadcast or signal ?
     assert(rc == 0);
 
     zoneSelection = calcPzoneA(); // 1 for A, 0 for B
@@ -255,6 +257,7 @@ void *customerServe(void *tId)
     {
         printf("Another thread is processing the theater, please wait, (from thread %d)\n", *threadId);
         rc = pthread_cond_wait(&seatsThresholdCond, &seatsMutex);
+        assert(rc == 0);
     }
     if (zoneSelection == 1)
     {
@@ -274,6 +277,7 @@ void *customerServe(void *tId)
 
         totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
         rc = pthread_mutex_unlock(&supportTimeMutex);
+        assert(rc == 0);
     }
     else if (reserveSeatsResult == -2)
     {
@@ -285,11 +289,7 @@ void *customerServe(void *tId)
 
         totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
         rc = pthread_mutex_unlock(&supportTimeMutex);
-        if (rc != 0)
-        {
-	   printf("ERROR: return code from pthread_mutex_unlock(seatsThresholdCond) is %d\n", rc);
-	   pthread_exit(&rc);
-        }
+        assert(rc == 0);
     }
     else if (reserveSeatsResult == 1)
     { // there are enough available seats
@@ -302,19 +302,10 @@ void *customerServe(void *tId)
 
     isProcessingSeats = 0;
     rc = pthread_cond_signal(&seatsThresholdCond);
-    if (rc != 0)
-    {
-	printf("ERROR: return code from pthread_cond_signal(seatsThresholdCond) is %d\n", rc);
-	pthread_exit(&rc);
-    }
     assert(rc == 0);
 
     rc = pthread_mutex_unlock(&seatsMutex);
-    if (rc != 0)
-    {
-	printf("ERROR: return code from pthread_mutex_unlock(seatsMutex) is %d\n", rc);
-	pthread_exit(&rc);
-    }
+    assert(rc == 0);
 
     // end of this customer.Thread finishes
     if (reserveSeatsResult != 1)
@@ -323,22 +314,13 @@ void *customerServe(void *tId)
     if (flagPayment == 1)
     { // go for cashier
         rc = pthread_mutex_lock(&CashCounter);
-        if (rc != 0)
-        {
-	   printf("ERROR: return code from pthread_mutex_lock(CashCounter) is %d\n", rc);
-	   pthread_exit(&rc);
-	}
         assert(rc == 0);
-	// spurious wake up
+        // spurious wake up
         while (currentCashInUse >= NCASH)
         {
             printf("Currently waiting for the first available Cashier, please wait, %d ---\n", currentCashInUse);
             rc = pthread_cond_wait(&cashThresholdCond, &CashCounter);
-	    if (rc != 0)
-            {
-	      printf("ERROR: return code from pthread_cond_wait(cashThresholdCond,CashCounter) is %d\n", rc);
-	      pthread_exit(&rc);
-	    }
+            assert(rc == 0);
         }
         printf("An available Cashier is found for customer %d\n", *threadId);
         currentCashInUse++;
@@ -350,40 +332,23 @@ void *customerServe(void *tId)
 
         currentCashInUse--;
         rc = pthread_cond_signal(&cashThresholdCond);
-        if (rc != 0)
-        {
-	   printf("ERROR: return code from pthread_cond_signal(cashThresholdCond) is %d\n", rc);
-	   pthread_exit(&rc);
-	}
         assert(rc == 0);
         rc = pthread_mutex_unlock(&CashCounter);
-        if (rc != 0)
-        {
-	   printf("ERROR: return code from pthread_mutex_unlock(CashCounter) is %d\n", rc);
-	   pthread_exit(&rc);
-	}
+        assert(rc == 0);
 
         choice = calcPCardSuccess();
         if (choice == 1)
         { // tha ginei h pliromh
 
             rc = pthread_mutex_lock(&addToBalance);
-    	    if (rc != 0)
-	    {
-	      printf("ERROR: return code from pthread_mutex_lock(addToBalance) is %d\n", rc);
-	      pthread_exit(&rc);
-	    }
+            assert(rc == 0);
 
             balance = balance + totalSeatsCost;
             successfulPayments++;
             clock_gettime(CLOCK_REALTIME, &custCompleted);
             printf("Customer %d successfull payment %d€\n", *threadId, totalSeatsCost);
             rc = pthread_mutex_unlock(&addToBalance);
-	    if (rc != 0)
-	    {
-	      printf("ERROR: return code from pthread_mutex_unlock(addToBalance) is %d\n", rc);
-	      pthread_exit(&rc);
-	    }
+            assert(rc == 0);
         }
         else if (choice == -1)
         { // den tha ginei h pliromi
@@ -397,34 +362,18 @@ void *customerServe(void *tId)
 
         // totalsupporttime
         rc = pthread_mutex_lock(&supportTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_mutex_lock(supportTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
+        assert(rc == 0);
 
         totalSupportTime += custCompleted.tv_nsec - start.tv_nsec;
         rc = pthread_mutex_unlock(&supportTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_mutex_unlock(supportTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
+        assert(rc == 0);
 
         // total waiting time
         rc = pthread_mutex_lock(&waitingTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_mutex_lock(waitingTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
+        assert(rc == 0);
 
         rc = pthread_mutex_unlock(&waitingTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_mutex_unlock(waitingTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
+        assert(rc == 0);
     }
     else if (flagPayment == 0)
     { // cancel reserved seats
@@ -500,28 +449,39 @@ int main(int argc, char *argv[])
     }
     /*arxikopoiisi tou mutex kai tou condition*/
     rc = pthread_mutex_init(&TelCounter, NULL);
+    assert(rc == 0);
     rc = pthread_mutex_init(&CashCounter, NULL);
+    assert(rc == 0);
     rc = pthread_mutex_init(&seatsMutex, NULL);
-    rc = pthread_mutex_init(&PrintMutex, NULL); // den exw xrhsimopoihsei printmutex sthn customerServe
+    assert(rc == 0);
+    rc = pthread_mutex_init(&PrintMutex, NULL); // den exw xrhsimopoihsei printmutex sthn
+    assert(rc == 0);
     rc = pthread_mutex_init(&ticketFinder, NULL);
+    assert(rc == 0);
     rc = pthread_mutex_init(&addToBalance, NULL);
+    assert(rc == 0);
     rc = pthread_mutex_init(&waitingTimeMutex, NULL);
+    assert(rc == 0);
     rc = pthread_mutex_init(&supportTimeMutex, NULL);
+    assert(rc == 0);
 
     rc = pthread_cond_init(&telThresholdCond, NULL);
+    assert(rc == 0);
     rc = pthread_cond_init(&cashThresholdCond, NULL);
+    assert(rc == 0);
     rc = pthread_cond_init(&ticketThresholdCond, NULL);
+    assert(rc == 0);
     rc = pthread_cond_init(&balanceThresholdCond, NULL);
+    assert(rc == 0);
     rc = pthread_cond_init(&printThresholdCond, NULL);
+    assert(rc == 0);
     rc = pthread_cond_init(&timeThresholdCond, NULL);
+    assert(rc == 0);
     rc = pthread_cond_init(&seatsThresholdCond, NULL);
+    assert(rc == 0);
 
     pthread_t *threads = malloc(sizeof(pthread_t) * Ncust);
-    if (threads == NULL)
-    {
-        printf("ERROR: Failed to allocate threads, not enough memory!\n");
-        return -1;
-    }
+    assert(threads == NULL);
     printf("Main: Creating %d threads, one for each customer.\n", Ncust);
     int threadIds[Ncust];
     for (int i = 0; i < Ncust; i++)
@@ -529,6 +489,7 @@ int main(int argc, char *argv[])
         threadIds[i] = i;
         // MARIA MOU edw sto allaksa evala i anti gia i+1, IDKW
         rc = pthread_create(&threads[i], NULL, customerServe, &threadIds[i]);
+        assert(rc == 0);
         // wait for random seconds in [treslow, treshigh] before going to next thread creation
         int rndslpTime = rndGen(T_RES_LOW, T_RES_HIGH);
         sleep(rndslpTime);
@@ -542,21 +503,36 @@ int main(int argc, char *argv[])
     }
     /*"katastrofi" mutex kai condition*/
     rc = pthread_mutex_destroy(&TelCounter);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&CashCounter);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&seatsMutex);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&PrintMutex);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&ticketFinder);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&addToBalance);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&waitingTimeMutex);
+    assert(rc == 0);
     rc = pthread_mutex_destroy(&supportTimeMutex);
+    assert(rc == 0);
 
     rc = pthread_cond_destroy(&telThresholdCond);
+    assert(rc == 0);
     rc = pthread_cond_destroy(&cashThresholdCond);
+    assert(rc == 0);
     rc = pthread_cond_destroy(&ticketThresholdCond);
+    assert(rc == 0);
     rc = pthread_cond_destroy(&balanceThresholdCond);
+    assert(rc == 0);
     rc = pthread_cond_destroy(&printThresholdCond);
+    assert(rc == 0);
     rc = pthread_cond_destroy(&timeThresholdCond);
+    assert(rc == 0);
     rc = pthread_cond_destroy(&seatsThresholdCond);
+    assert(rc == 0);
 
     printf("\nZone A\n");
     for (int i = 0; i < NzoneA; i++)
@@ -575,7 +551,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("\nThe balance is: %d\n", balance);	//Sunolika Esoda
+    printf("\nThe balance is: %d\n", balance);                      // Sunolika Esoda
     printf("Average waiting Time: %f\n", totalWaitingTime / Ncust); // Mesos xronos anamwnhs pelatwn
     printf("Average serving: %f\n", totalSupportTime / Ncust);      // mesos xronos ejhpiretisis pelatwn
     printf("Amount of transactions cancelled because of lack of seats: %f\n", seatCancellation / Ncust);
