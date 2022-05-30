@@ -4,8 +4,9 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <time.h>
+#include <assert.h>
 #define _XOPEN_SOURCE 500
-#include "3200248_3150094_3180129.h"
+#include "p3200248-p3150094-p3180129-res.h"
 
 int Ncust;
 unsigned int seed;
@@ -15,7 +16,6 @@ int pay_chance = 0;
 // int zone_chance = 0;
 int ticketcost = 0;
 int balance = 0;
-int id_transaction = 0;
 double totalWaitingTime = 0; // mesos xronos anamonhs
 double totalSupportTime = 0; // mesos xronos eksipirethshs pelaton
 int currentTelInUse = 0;
@@ -219,20 +219,12 @@ void *customerServe(void *tId)
     clock_gettime(CLOCK_REALTIME, &start);
 
     rc = pthread_mutex_lock(&TelCounter);
-    if (rc != 0)
-    {
-        printf("ERROR: return code from pthread_mutex_lock() is %d\n", rc);
-        pthread_exit(&rc);
-    }
+    assert(rc == 0);
+
     while (currentTelInUse >= NTEL)
     { // avoid spurious wakeup
         printf("Currently waiting for the first available Telephonist, please wait, %d ---\n", currentTelInUse);
         rc = pthread_cond_wait(&telThresholdCond, &TelCounter);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_cond_wait() is %d\n", rc);
-            pthread_exit(&rc);
-        }
     }
     printf("An available telephonist is found for customer %d\n", *threadId);
     currentTelInUse++;
@@ -243,17 +235,9 @@ void *customerServe(void *tId)
 
     currentTelInUse--;
     rc = pthread_mutex_unlock(&TelCounter);
-    if (rc != 0)
-    {
-        printf("ERROR: return code from pthread_mutex_unlock() is %d\n", rc);
-        pthread_exit(&rc);
-    }
+
     rc = pthread_cond_signal(&telThresholdCond);  //broadcast or signal ?
-    if (rc != 0)
-    {
-        printf("ERROR: return code from pthread_cond_signal(telThresholdCond) is %d\n", rc);
-        pthread_exit(&rc);
-    }
+    assert(rc == 0);
 
     zoneSelection = calcPzoneA(); // 1 for A, 0 for B
 
@@ -264,21 +248,13 @@ void *customerServe(void *tId)
     sleep(rndSeatAvailTime); // thread goes sleeping for this time
 
     rc = pthread_mutex_lock(&seatsMutex);
-    if (rc != 0)
-    {
-        printf("ERROR: return code from pthread_mutex_unlock(&seatsMutex) is %d\n", rc);
-        pthread_exit(&rc);
-    }
+    assert(rc == 0);
+
     // avoid spurious wakeup
     while (isProcessingSeats == 1)
     {
         printf("Another thread is processing the theater, please wait, (from thread %d)\n", *threadId);
         rc = pthread_cond_wait(&seatsThresholdCond, &seatsMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_cond_wait(seatsThresholdCond) is %d\n", rc);
-            pthread_exit(&rc);
-        }
     }
     if (zoneSelection == 1)
     {
@@ -294,18 +270,10 @@ void *customerServe(void *tId)
         seatCancellation++;
         clock_gettime(CLOCK_REALTIME, &custCompleted);
         rc = pthread_mutex_lock(&supportTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_cond_wait(waitingTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
+        assert(rc == 0);
+
         totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
         rc = pthread_mutex_unlock(&supportTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_mutex_unlock(supportTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
     }
     else if (reserveSeatsResult == -2)
     {
@@ -313,17 +281,14 @@ void *customerServe(void *tId)
         seatCancellation++;
         clock_gettime(CLOCK_REALTIME, &custCompleted);
         rc = pthread_mutex_lock(&supportTimeMutex);
-        if (rc != 0)
-        {
-            printf("ERROR: return code from pthread_cond_wait(waitingTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
-        }
+        assert(rc == 0);
+
         totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
         rc = pthread_mutex_unlock(&supportTimeMutex);
         if (rc != 0)
         {
-            printf("ERROR: return code from pthread_mutex_unlock(supportTimeMutex) is %d\n", rc);
-            pthread_exit(&rc);
+	   printf("ERROR: return code from pthread_mutex_unlock(seatsThresholdCond) is %d\n", rc);
+	   pthread_exit(&rc);
         }
     }
     else if (reserveSeatsResult == 1)
@@ -339,15 +304,18 @@ void *customerServe(void *tId)
     rc = pthread_cond_signal(&seatsThresholdCond);
     if (rc != 0)
     {
-        printf("ERROR: return code from pthread_cond_broadcast(&seatsThresholdCond) is %d\n", rc);
-        pthread_exit(&rc);
+	printf("ERROR: return code from pthread_cond_signal(seatsThresholdCond) is %d\n", rc);
+	pthread_exit(&rc);
     }
+    assert(rc == 0);
+
     rc = pthread_mutex_unlock(&seatsMutex);
     if (rc != 0)
     {
-        printf("ERROR: return code from pthread_mutex_unlock(&seatsMutex) is %d\n", rc);
-        pthread_exit(&rc);
+	printf("ERROR: return code from pthread_mutex_unlock(seatsMutex) is %d\n", rc);
+	pthread_exit(&rc);
     }
+
     // end of this customer.Thread finishes
     if (reserveSeatsResult != 1)
         pthread_exit(threadId);
@@ -357,18 +325,20 @@ void *customerServe(void *tId)
         rc = pthread_mutex_lock(&CashCounter);
         if (rc != 0)
         {
-            printf("ERROR: return code from pthread_mutex_lock() is %d\n", rc);
-            pthread_exit(&rc);
-        } // spurious wake up
+	   printf("ERROR: return code from pthread_mutex_lock(CashCounter) is %d\n", rc);
+	   pthread_exit(&rc);
+	}
+        assert(rc == 0);
+	// spurious wake up
         while (currentCashInUse >= NCASH)
         {
             printf("Currently waiting for the first available Cashier, please wait, %d ---\n", currentCashInUse);
             rc = pthread_cond_wait(&cashThresholdCond, &CashCounter);
-            if (rc != 0)
+	    if (rc != 0)
             {
-                printf("ERROR: return code from pthread_cond_wait(cashThresholdCond) is %d\n", rc);
-                pthread_exit(&rc);
-            }
+	      printf("ERROR: return code from pthread_cond_wait(cashThresholdCond,CashCounter) is %d\n", rc);
+	      pthread_exit(&rc);
+	    }
         }
         printf("An available Cashier is found for customer %d\n", *threadId);
         currentCashInUse++;
@@ -380,28 +350,40 @@ void *customerServe(void *tId)
 
         currentCashInUse--;
         rc = pthread_cond_signal(&cashThresholdCond);
+        if (rc != 0)
+        {
+	   printf("ERROR: return code from pthread_cond_signal(cashThresholdCond) is %d\n", rc);
+	   pthread_exit(&rc);
+	}
+        assert(rc == 0);
         rc = pthread_mutex_unlock(&CashCounter);
+        if (rc != 0)
+        {
+	   printf("ERROR: return code from pthread_mutex_unlock(CashCounter) is %d\n", rc);
+	   pthread_exit(&rc);
+	}
 
         choice = calcPCardSuccess();
         if (choice == 1)
         { // tha ginei h pliromh
 
             rc = pthread_mutex_lock(&addToBalance);
-            if (rc != 0)
-            {
-                printf("ERROR: return code from pthread_mutex_lock(addToBalance) is %d\n", rc);
-                pthread_exit(&rc);
-            }
+    	    if (rc != 0)
+	    {
+	      printf("ERROR: return code from pthread_mutex_lock(addToBalance) is %d\n", rc);
+	      pthread_exit(&rc);
+	    }
+
             balance = balance + totalSeatsCost;
             successfulPayments++;
             clock_gettime(CLOCK_REALTIME, &custCompleted);
             printf("Customer %d successfull payment %d€\n", *threadId, totalSeatsCost);
             rc = pthread_mutex_unlock(&addToBalance);
-            if (rc != 0)
-            {
-                printf("ERROR: return code from pthread_mutex_unlock(addToBalance) is %d\n", rc);
-                pthread_exit(&rc);
-            }
+	    if (rc != 0)
+	    {
+	      printf("ERROR: return code from pthread_mutex_unlock(addToBalance) is %d\n", rc);
+	      pthread_exit(&rc);
+	    }
         }
         else if (choice == -1)
         { // den tha ginei h pliromi
@@ -417,14 +399,15 @@ void *customerServe(void *tId)
         rc = pthread_mutex_lock(&supportTimeMutex);
         if (rc != 0)
         {
-            printf("ERROR: return code from pthread_mutex_unlock(CashCounter) is %d\n", rc);
+            printf("ERROR: return code from pthread_mutex_lock(supportTimeMutex) is %d\n", rc);
             pthread_exit(&rc);
         }
+
         totalSupportTime += custCompleted.tv_nsec - start.tv_nsec;
         rc = pthread_mutex_unlock(&supportTimeMutex);
         if (rc != 0)
         {
-            printf("ERROR: return code from pthread_mutex_unlock(CashCounter) is %d\n", rc);
+            printf("ERROR: return code from pthread_mutex_unlock(supportTimeMutex) is %d\n", rc);
             pthread_exit(&rc);
         }
 
@@ -432,14 +415,14 @@ void *customerServe(void *tId)
         rc = pthread_mutex_lock(&waitingTimeMutex);
         if (rc != 0)
         {
-            printf("ERROR: return code from pthread_mutex_unlock(CashCounter) is %d\n", rc);
+            printf("ERROR: return code from pthread_mutex_lock(waitingTimeMutex) is %d\n", rc);
             pthread_exit(&rc);
         }
-        totalWaitingTime += cashConnect.tv_nsec - telDisconnect.tv_nsec;
+
         rc = pthread_mutex_unlock(&waitingTimeMutex);
         if (rc != 0)
         {
-            printf("ERROR: return code from pthread_mutex_unlock(CashCounter) is %d\n", rc);
+            printf("ERROR: return code from pthread_mutex_unlock(waitingTimeMutex) is %d\n", rc);
             pthread_exit(&rc);
         }
     }
@@ -592,8 +575,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("\nThe balance is: %d\n", balance);
-    // printf("Total transactions: %d\n",id_transaction);							//Sunolika Esoda
+    printf("\nThe balance is: %d\n", balance);	//Sunolika Esoda
     printf("Average waiting Time: %f\n", totalWaitingTime / Ncust); // Mesos xronos anamwnhs pelatwn
     printf("Average serving: %f\n", totalSupportTime / Ncust);      // mesos xronos ejhpiretisis pelatwn
     printf("Amount of transactions cancelled because of lack of seats: %f\n", seatCancellation / Ncust);
