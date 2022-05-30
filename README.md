@@ -2,7 +2,7 @@
 
 Run sh file in linux os 
 ```sh
-sh runProject.sh
+sh test-res.sh
 ```
 
 ## Contributors
