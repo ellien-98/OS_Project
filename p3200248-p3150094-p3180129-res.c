@@ -232,7 +232,12 @@ void *customerServe(void *tId)
     // begin counting time the customer is being serviced - talking on the phone
     clock_gettime(CLOCK_REALTIME, &telConnect);
     // add this customer's waiting time until telephonist support, to total
+    rc = pthread_mutex_lock(&waitingTimeMutex);
+    assert(rc == 0);
     totalWaitingTime = totalWaitingTime + (telConnect.tv_nsec - start.tv_nsec);
+    rc = pthread_mutex_unlock(&waitingTimeMutex);
+    assert(rc == 0);
+
 
     currentTelInUse--;
     rc = pthread_mutex_unlock(&TelCounter);
@@ -269,24 +274,36 @@ void *customerServe(void *tId)
     }
     if (reserveSeatsResult == -1)
     {
+        rc = pthread_mutex_lock(&PrintMutex);
+        assert(rc == 0);
         printf("Customer %d: The reservation failed not continuous seats found. \n", *threadId);
+        rc = pthread_mutex_unlock(&PrintMutex);
+        assert(rc == 0);
+
         seatCancellation++;
+
         clock_gettime(CLOCK_REALTIME, &custCompleted);
         rc = pthread_mutex_lock(&supportTimeMutex);
         assert(rc == 0);
-
         totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
         rc = pthread_mutex_unlock(&supportTimeMutex);
         assert(rc == 0);
     }
     else if (reserveSeatsResult == -2)
     {
+
+        rc = pthread_mutex_lock(&PrintMutex);
+        assert(rc == 0);
         printf("Customer %d: The reservation failed not continuous seats found. \n", *threadId);
+        rc = pthread_mutex_unlock(&PrintMutex);
+        assert(rc == 0);
+
+
         seatCancellation++;
+
         clock_gettime(CLOCK_REALTIME, &custCompleted);
         rc = pthread_mutex_lock(&supportTimeMutex);
         assert(rc == 0);
-
         totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
         rc = pthread_mutex_unlock(&supportTimeMutex);
         assert(rc == 0);
@@ -294,7 +311,13 @@ void *customerServe(void *tId)
     else if (reserveSeatsResult == 1)
     { // there are enough available seats
         totalSeatsCost = zoneSelection == 1 ? rndSeats * CzoneA : rndSeats * CzoneB;
+
+        rc = pthread_mutex_lock(&PrintMutex);
+        assert(rc == 0);
         printf("The seats you requested are available, total cost: %d€\n", totalSeatsCost);
+        rc = pthread_mutex_unlock(&PrintMutex);
+        assert(rc == 0);
+
         flagPayment = 1;
         clock_gettime(CLOCK_REALTIME, &telDisconnect);
 
@@ -327,6 +350,13 @@ void *customerServe(void *tId)
 
         clock_gettime(CLOCK_REALTIME, &cashConnect);
 
+        rc = pthread_mutex_lock(&waitingTimeMutex);
+        assert(rc == 0);
+        totalWaitingTime = totalWaitingTime + (cashConnect.tv_nsec - telDisconnect.tv_nsec);
+        rc = pthread_mutex_unlock(&waitingTimeMutex);
+        assert(rc == 0);
+
+
         rndSecCash = rndGen(T_CASH_LOW, T_CASH_HIGH);
         sleep(rndSecCash);
 
@@ -342,8 +372,8 @@ void *customerServe(void *tId)
 
             rc = pthread_mutex_lock(&addToBalance);
             assert(rc == 0);
-
             balance = balance + totalSeatsCost;
+
             successfulPayments++;
             clock_gettime(CLOCK_REALTIME, &custCompleted);
             printf("Customer %d successfull payment %d€\n", *threadId, totalSeatsCost);
@@ -352,7 +382,13 @@ void *customerServe(void *tId)
         }
         else if (choice == -1)
         { // den tha ginei h pliromi
+
+            rc = pthread_mutex_lock(&PrintMutex);
+            assert(rc == 0);
             printf("Customer %d: The reservation failed because the credit card transaction was not accepted\n", *threadId);
+            rc = pthread_mutex_unlock(&PrintMutex);
+            assert(rc == 0);
+
             // unsuccessfulPayments++;
             clock_gettime(CLOCK_REALTIME, &custCompleted);
             flagPayment = 0;
