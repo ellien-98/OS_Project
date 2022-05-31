@@ -12,8 +12,8 @@
 
 int Ncust;
 unsigned int seed;
-int newSeatArrayA[NzoneA][Nseat];
-int newSeatArrayB[NzoneB][Nseat];
+int seatsA[NzoneA][Nseat];
+int seatsB[NzoneB][Nseat];
 int pay_chance = 0;
 int ticketcost = 0;
 int balance = 0;
@@ -102,7 +102,7 @@ int reserveSeatsZA(int tickets, void *tId)
     {
         for (j = 0; j < Nseat; j++)
         {
-            if (newSeatArrayA[i][j] == -1)
+            if (seatsA[i][j] == -1)
                 seatsAvail++;
         }
     }
@@ -121,7 +121,7 @@ int reserveSeatsZA(int tickets, void *tId)
             seatsCounter = 0;
             for (j = 0; j < Nseat; j++)
             {
-                if (newSeatArrayA[i][j] != -1)
+                if (seatsA[i][j] != -1)
                 {
                     seatsCounter = 0;
                 }
@@ -133,7 +133,7 @@ int reserveSeatsZA(int tickets, void *tId)
                         startSeatPosition = (j + 1) - tickets; // dhlwsi k
                         for (int k = 0; k < tickets; k++)
                         {
-                            newSeatArrayA[i][startSeatPosition + k] = *id;
+                            seatsA[i][startSeatPosition + k] = *id;
                         }
                         printf("Seira %d, theseis %d ews %d in Zone B\n", i + 1, startSeatPosition + 1, startSeatPosition + tickets);
                         return 1;
@@ -155,7 +155,7 @@ int reserveSeatsZB(int tickets, void *tId)
     {
         for (j = 0; j < Nseat; j++)
         {
-            if (newSeatArrayB[i][j] == -1)
+            if (seatsB[i][j] == -1)
                 seatsAvail++;
         }
     }
@@ -174,7 +174,7 @@ int reserveSeatsZB(int tickets, void *tId)
             seatsCounter = 0;
             for (j = 0; j < Nseat; j++)
             {
-                if (newSeatArrayB[i][j] != -1)
+                if (seatsB[i][j] != -1)
                 {
                     seatsCounter = 0;
                 }
@@ -186,7 +186,7 @@ int reserveSeatsZB(int tickets, void *tId)
                         startSeatPosition = (j + 1) - tickets;
                         for (int k = 0; k < tickets; k++)
                         {
-                            newSeatArrayB[i][startSeatPosition + k] = *id;
+                            seatsB[i][startSeatPosition + k] = *id;
                         }
                         printf("Seira %d, theseis %d ews %d in Zone B\n", i + 1, startSeatPosition + 1, startSeatPosition + tickets);
                         return 1;
@@ -414,9 +414,9 @@ void *customerServe(void *tId)
             {
                 for (int j = 0; j < Nseat; j++)
                 {
-                    if (newSeatArrayA[i][j] == *threadId)
+                    if (seatsA[i][j] == *threadId)
                     {
-                        newSeatArrayA[i][j] = -1;
+                        seatsA[i][j] = -1;
                     }
                 }
             }
@@ -427,9 +427,9 @@ void *customerServe(void *tId)
             {
                 for (int j = 0; j < Nseat; j++)
                 {
-                    if (newSeatArrayB[i][j] == *threadId)
+                    if (seatsB[i][j] == *threadId)
                     {
-                        newSeatArrayB[i][j] = -1;
+                        seatsB[i][j] = -1;
                     }
                 }
             }
@@ -469,14 +469,14 @@ int main(int argc, char *argv[])
     {
         for (j = 0; j < Nseat; j++)
         {
-            newSeatArrayA[i][j] = -1;
+            seatsA[i][j] = -1;
         }
     }
     for (i = 0; i < NzoneB; i++)
     {
         for (j = 0; j < Nseat; j++)
         {
-            newSeatArrayB[i][j] = -1;
+            seatsB[i][j] = -1;
         }
     }
     /*arxikopoiisi tou mutex kai tou condition*/
@@ -576,7 +576,7 @@ int main(int argc, char *argv[])
     {
         for (int j = 0; j < Nseat; j++)
         {
-            printf(" Ζώνη Α / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayA[i][j]);
+            printf(" Ζώνη Α / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, seatsA[i][j]);
         }
     }
     printf("\nZone B\n");
@@ -584,7 +584,7 @@ int main(int argc, char *argv[])
     {
         for (int j = 0; j < Nseat; j++)
         {
-            printf(" Ζώνη B / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayB[i][j]);
+            printf(" Ζώνη B / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, seatsB[i][j]);
         }
     }
     avgWaitingTime = (double)(totalWaitingTime / NS_PER_SECOND) / Ncust;
