@@ -79,11 +79,6 @@ int calcPCardSuccess()
 int rndGen(int low, int high)
 {
     int result; // first seed the random number generator
-    /*
-     * srand(seed);    //user gave the seed
-    result= ( (rand() % (high+1-low) ) + low );
-     */
-    // rand_r(&seed);    //user gave the seed
     result = ((rand_r(&seed) % (high + 1 - low)) + low);
     return result;
 }
@@ -579,9 +574,9 @@ int main(int argc, char *argv[])
 
     printf("\nZone A\n");
     for (int i = 0; i < NzoneA; i++)
-    { // ana seira
+    {
         for (int j = 0; j < Nseat; j++)
-        { // ana seira
+        {
             printf(" Ζώνη Α / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayA[i][j]);
         }
     }
@@ -589,7 +584,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < NzoneB; i++)
     {
         for (int j = 0; j < Nseat; j++)
-        { // ana seira
+        {
             printf(" Ζώνη B / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayB[i][j]);
         }
     }
