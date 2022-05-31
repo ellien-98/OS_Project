@@ -15,7 +15,6 @@ unsigned int seed;
 int newSeatArrayA[NzoneA][Nseat];
 int newSeatArrayB[NzoneB][Nseat];
 int pay_chance = 0;
-// int zone_chance = 0;
 int ticketcost = 0;
 int balance = 0;
 double totalWaitingTime = 0; // mesos xronos anamonhs
