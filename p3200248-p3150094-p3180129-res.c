@@ -88,11 +88,14 @@ int rndGen(int low, int high)
     return result;
 }
 
-enum { NS_PER_SECOND = 1000000000 };
+enum
+{
+    NS_PER_SECOND = 1000000000
+};
 
 double sub_time(struct timespec t1, struct timespec t2)
 {
-    return NS_PER_SECOND*(t2.tv_sec - t1.tv_sec)+(t2.tv_nsec - t1.tv_nsec);
+    return NS_PER_SECOND * (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec);
 }
 
 int reserveSeatsZA(int tickets, void *tId)
@@ -241,7 +244,6 @@ void *customerServe(void *tId)
     rc = pthread_mutex_unlock(&waitingTimeMutex);
     assert(rc == 0);
 
-
     currentTelInUse--;
     rc = pthread_mutex_unlock(&TelCounter);
     assert(rc == 0);
@@ -255,7 +257,7 @@ void *customerServe(void *tId)
     rndSeats = rndGen(N_SEAT_LOW, N_SEAT_HIGH);
     // time the telephonist needs to determine availability of continuous seats in selected zone
     int rndSeatAvailTime = rndGen(T_SEAT_LOW, T_SEAT_HIGH);
-    printf("Customer %d: Finish  with Telephonist wait %d seconds\n",*threadId,rndSeatAvailTime);
+    printf("Customer %d: Finish  with Telephonist wait %d seconds\n", *threadId, rndSeatAvailTime);
     sleep(rndSeatAvailTime); // thread goes sleeping for this time
 
     rc = pthread_mutex_lock(&seatsMutex);
@@ -299,7 +301,6 @@ void *customerServe(void *tId)
         assert(rc == 0);
         rc = pthread_mutex_unlock(&PrintMutex);
         assert(rc == 0);
-
 
         seatCancellation++;
 
@@ -357,7 +358,6 @@ void *customerServe(void *tId)
         totalWaitingTime = totalWaitingTime + sub_time(telDisconnect, cashConnect);
         rc = pthread_mutex_unlock(&waitingTimeMutex);
         assert(rc == 0);
-
 
         rndSecCash = rndGen(T_CASH_LOW, T_CASH_HIGH);
         sleep(rndSecCash);
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
 {
 
     int rc, i, j;
-    double avgWaitingTime,avgServingTime,avgSeatCancellation,avgCreditCancellation,avgSuccessTransact;
+    double avgWaitingTime, avgServingTime, avgSeatCancellation, avgCreditCancellation, avgSuccessTransact;
     // Checks if user gave the correct input
     if (argc != 3)
     {
@@ -542,7 +542,7 @@ int main(int argc, char *argv[])
     {
         rc = pthread_join(threads[i], &status);
         assert(rc == 0);
-        printf("Main: Thread %d terminated successfully. \n",*(int *) status);
+        printf("Main: Thread %d terminated successfully. \n", *(int *)status);
     }
     /*"katastrofi" mutex kai condition*/
     rc = pthread_mutex_destroy(&TelCounter);
@@ -593,14 +593,14 @@ int main(int argc, char *argv[])
             printf(" Ζώνη B / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayB[i][j]);
         }
     }
-    avgWaitingTime=(double) (totalWaitingTime/NS_PER_SECOND) /Ncust;
-    avgServingTime=(double) (totalSupportTime/NS_PER_SECOND) / Ncust;
-    avgSeatCancellation=(double) seatCancellation/ Ncust;
-    avgCreditCancellation=(double) creditCancellation/ Ncust;
-    avgSuccessTransact=(double) (Ncust - seatCancellation - creditCancellation) / Ncust;
-    printf("\nThe balance is: %d\n", balance);                      // Sunolika Esoda
+    avgWaitingTime = (double)(totalWaitingTime / NS_PER_SECOND) / Ncust;
+    avgServingTime = (double)(totalSupportTime / NS_PER_SECOND) / Ncust;
+    avgSeatCancellation = (double)seatCancellation / Ncust;
+    avgCreditCancellation = (double)creditCancellation / Ncust;
+    avgSuccessTransact = (double)(Ncust - seatCancellation - creditCancellation) / Ncust;
+    printf("\nThe balance is: %d\n", balance);                          // Sunolika Esoda
     printf("Average waiting Time in seconds: %.2lf\n", avgWaitingTime); // Mesos xronos anamwnhs pelatwn
-    printf("Average serving Time in seconds: %.2lf\n", avgServingTime);      // mesos xronos ejhpiretisis pelatwn
+    printf("Average serving Time in seconds: %.2lf\n", avgServingTime); // mesos xronos ejhpiretisis pelatwn
     printf("Percentage of lack of seats cancelled transactions : %.2lf%\n", avgSeatCancellation * 100);
     printf("Percentage of credit card failure cancelled transactions : %.2lf%\n", avgCreditCancellation * 100);
     printf("Percentage of successful transactions: %.2lf%\n", avgSuccessTransact * 100);
