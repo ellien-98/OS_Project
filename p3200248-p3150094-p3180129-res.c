@@ -5,7 +5,9 @@
 #include <stdbool.h>
 #include <time.h>
 #include <assert.h>
+#include <unistd.h>
 #define _XOPEN_SOURCE 500
+#define _POSIX_C_SOURCE 200809L
 #include "p3200248-p3150094-p3180129-res.h"
 
 int Ncust;
@@ -84,6 +86,13 @@ int rndGen(int low, int high)
     // rand_r(&seed);    //user gave the seed
     result = ((rand_r(&seed) % (high + 1 - low)) + low);
     return result;
+}
+
+enum { NS_PER_SECOND = 1000000000 };
+
+double sub_time(struct timespec t1, struct timespec t2)
+{
+    return NS_PER_SECOND*(t2.tv_sec - t1.tv_sec)+(t2.tv_nsec - t1.tv_nsec);
 }
 
 int reserveSeatsZA(int tickets, void *tId)
@@ -200,10 +209,7 @@ void *customerServe(void *tId)
     // tv_nsec – The variable of the long type used to store time in nanoseconds.
     struct timespec start, telConnect, custCompleted; // stop for error stop, completed for successful reservation
     struct timespec cashConnect, telDisconnect;
-    // struct timespec custStopWait;
-    struct timespec start2, stop2, stop;
     int rndSeats;
-    // int rndZone;
     int rndSecTel;
     int rndSecCash;
     int *threadId = (int *)tId;
@@ -231,7 +237,7 @@ void *customerServe(void *tId)
     // add this customer's waiting time until telephonist support, to total
     rc = pthread_mutex_lock(&waitingTimeMutex);
     assert(rc == 0);
-    totalWaitingTime = totalWaitingTime + (telConnect.tv_nsec - start.tv_nsec);
+    totalWaitingTime = totalWaitingTime + sub_time(start, telConnect);
     rc = pthread_mutex_unlock(&waitingTimeMutex);
     assert(rc == 0);
 
@@ -274,7 +280,6 @@ void *customerServe(void *tId)
     {
         rc = pthread_mutex_lock(&PrintMutex);
         assert(rc == 0);
-        printf("Customer %d: The reservation failed not continuous seats found. \n", *threadId);
         rc = pthread_mutex_unlock(&PrintMutex);
         assert(rc == 0);
 
@@ -283,7 +288,7 @@ void *customerServe(void *tId)
         clock_gettime(CLOCK_REALTIME, &custCompleted);
         rc = pthread_mutex_lock(&supportTimeMutex);
         assert(rc == 0);
-        totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
+        totalSupportTime = totalSupportTime + sub_time(start, custCompleted);
         rc = pthread_mutex_unlock(&supportTimeMutex);
         assert(rc == 0);
     }
@@ -292,7 +297,6 @@ void *customerServe(void *tId)
 
         rc = pthread_mutex_lock(&PrintMutex);
         assert(rc == 0);
-        printf("Customer %d: The reservation failed not continuous seats found. \n", *threadId);
         rc = pthread_mutex_unlock(&PrintMutex);
         assert(rc == 0);
 
@@ -302,7 +306,7 @@ void *customerServe(void *tId)
         clock_gettime(CLOCK_REALTIME, &custCompleted);
         rc = pthread_mutex_lock(&supportTimeMutex);
         assert(rc == 0);
-        totalSupportTime = totalSupportTime + (custCompleted.tv_nsec - start.tv_nsec);
+        totalSupportTime = totalSupportTime + sub_time(start, custCompleted);
         rc = pthread_mutex_unlock(&supportTimeMutex);
         assert(rc == 0);
     }
@@ -350,7 +354,7 @@ void *customerServe(void *tId)
 
         rc = pthread_mutex_lock(&waitingTimeMutex);
         assert(rc == 0);
-        totalWaitingTime = totalWaitingTime + (cashConnect.tv_nsec - telDisconnect.tv_nsec);
+        totalWaitingTime = totalWaitingTime + sub_time(telDisconnect, cashConnect);
         rc = pthread_mutex_unlock(&waitingTimeMutex);
         assert(rc == 0);
 
@@ -397,8 +401,7 @@ void *customerServe(void *tId)
         // totalsupporttime
         rc = pthread_mutex_lock(&supportTimeMutex);
         assert(rc == 0);
-
-        totalSupportTime += custCompleted.tv_nsec - start.tv_nsec;
+        totalSupportTime = totalSupportTime + sub_time(start, custCompleted);
         rc = pthread_mutex_unlock(&supportTimeMutex);
         assert(rc == 0);
 
@@ -590,14 +593,14 @@ int main(int argc, char *argv[])
             printf(" Ζώνη B / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayB[i][j]);
         }
     }
-    avgWaitingTime=totalWaitingTime /(double) Ncust;
-    avgServingTime=totalSupportTime /(double) Ncust;
-    avgSeatCancellation=(double) seatCancellation/ (double) Ncust;
-    avgCreditCancellation=(double) creditCancellation/ (double) Ncust;
-    avgSuccessTransact=(double) (Ncust - seatCancellation - creditCancellation) / (double) Ncust;
+    avgWaitingTime=(double) (totalWaitingTime/NS_PER_SECOND) /Ncust;
+    avgServingTime=(double) (totalSupportTime/NS_PER_SECOND) / Ncust;
+    avgSeatCancellation=(double) seatCancellation/ Ncust;
+    avgCreditCancellation=(double) creditCancellation/ Ncust;
+    avgSuccessTransact=(double) (Ncust - seatCancellation - creditCancellation) / Ncust;
     printf("\nThe balance is: %d\n", balance);                      // Sunolika Esoda
-    printf("Average waiting Time in nanoSec: %.2lf\n", avgWaitingTime); // Mesos xronos anamwnhs pelatwn
-    printf("Average serving Time in nanoSec: %.2lf\n", avgServingTime);      // mesos xronos ejhpiretisis pelatwn
+    printf("Average waiting Time in seconds: %.2lf\n", avgWaitingTime); // Mesos xronos anamwnhs pelatwn
+    printf("Average serving Time in seconds: %.2lf\n", avgServingTime);      // mesos xronos ejhpiretisis pelatwn
     printf("Percentage of lack of seats cancelled transactions : %.2lf%\n", avgSeatCancellation * 100);
     printf("Percentage of credit card failure cancelled transactions : %.2lf%\n", avgCreditCancellation * 100);
     printf("Percentage of successful transactions: %.2lf%\n", avgSuccessTransact * 100);
