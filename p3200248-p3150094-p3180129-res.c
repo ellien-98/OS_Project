@@ -27,11 +27,8 @@ int successfulPayments = 0; // to compare for final statistics
 int unsuccessfulPayments = 0;
 int reserveSeatsResult = 500;
 int choice = 50;
-float creditCancellation = 0;
-float seatCancellation = 0;
-// float amountSeatCancels = 0.0f;
-// float amountCreditCancels = 0.0f;
-float successfulReservs = 0.0f;
+int creditCancellation = 0;
+int seatCancellation = 0;
 char zone = 'x';
 
 pthread_mutex_t TelCounter;
@@ -132,7 +129,7 @@ int reserveSeatsZA(int tickets, void *tId)
                         {
                             newSeatArrayA[i][startSeatPosition + k] = *id;
                         }
-                        printf("Seira %d, theseis %d ews %d in Zone B\n", i, startSeatPosition + 1, startSeatPosition + tickets);
+                        printf("Seira %d, theseis %d ews %d in Zone B\n", i + 1, startSeatPosition + 1, startSeatPosition + tickets);
                         return 1;
                     }
                 }
@@ -185,7 +182,7 @@ int reserveSeatsZB(int tickets, void *tId)
                         {
                             newSeatArrayB[i][startSeatPosition + k] = *id;
                         }
-                        printf("Seira %d, theseis %d ews %d in Zone B\n", i, startSeatPosition + 1, startSeatPosition + tickets);
+                        printf("Seira %d, theseis %d ews %d in Zone B\n", i + 1, startSeatPosition + 1, startSeatPosition + tickets);
                         return 1;
                     }
                 }
@@ -243,7 +240,7 @@ void *customerServe(void *tId)
     rc = pthread_mutex_unlock(&TelCounter);
     assert(rc == 0);
 
-    rc = pthread_cond_signal(&telThresholdCond); // broadcast or signal ?
+    rc = pthread_cond_signal(&telThresholdCond);
     assert(rc == 0);
 
     zoneSelection = calcPzoneA(); // 1 for A, 0 for B
@@ -252,6 +249,7 @@ void *customerServe(void *tId)
     rndSeats = rndGen(N_SEAT_LOW, N_SEAT_HIGH);
     // time the telephonist needs to determine availability of continuous seats in selected zone
     int rndSeatAvailTime = rndGen(T_SEAT_LOW, T_SEAT_HIGH);
+    printf("Customer %d: Finish  with Telephonist wait %d seconds\n",*threadId,rndSeatAvailTime);
     sleep(rndSeatAvailTime); // thread goes sleeping for this time
 
     rc = pthread_mutex_lock(&seatsMutex);
@@ -332,7 +330,7 @@ void *customerServe(void *tId)
 
     // end of this customer.Thread finishes
     if (reserveSeatsResult != 1)
-        pthread_exit(threadId);
+        pthread_exit(tId);
 
     if (flagPayment == 1)
     { // go for cashier
@@ -393,7 +391,7 @@ void *customerServe(void *tId)
             clock_gettime(CLOCK_REALTIME, &custCompleted);
             flagPayment = 0;
             creditCancellation++;
-            pthread_exit(&threadId);
+            pthread_exit(tId);
         }
 
         // totalsupporttime
@@ -447,6 +445,7 @@ int main(int argc, char *argv[])
 {
 
     int rc, i, j;
+    double avgWaitingTime,avgServingTime,avgSeatCancellation,avgCreditCancellation,avgSuccessTransact;
     // Checks if user gave the correct input
     if (argc != 3)
     {
@@ -524,10 +523,9 @@ int main(int argc, char *argv[])
     }
     printf("Main: Creating %d threads, one for each customer.\n", Ncust);
     int threadIds[Ncust];
-    for (int i = 0; i < Ncust; i++)
+    for (int i = 1; i <= Ncust; i++)
     {
         threadIds[i] = i;
-        // MARIA MOU edw sto allaksa evala i anti gia i+1, IDKW
         rc = pthread_create(&threads[i], NULL, customerServe, &threadIds[i]);
         assert(rc == 0);
         // wait for random seconds in [treslow, treshigh] before going to next thread creation
@@ -537,9 +535,11 @@ int main(int argc, char *argv[])
 
     // the end, wait for costumer threads to end
     void *status;
-    for (int i = 0; i < Ncust; i++)
+    for (int i = 1; i <= Ncust; i++)
     {
         rc = pthread_join(threads[i], &status);
+        assert(rc == 0);
+        printf("Main: Thread %d terminated successfully. \n",*(int *) status);
     }
     /*"katastrofi" mutex kai condition*/
     rc = pthread_mutex_destroy(&TelCounter);
@@ -590,14 +590,17 @@ int main(int argc, char *argv[])
             printf(" Ζώνη B / Σειρά %d / Θέση %d / Πελάτης %d, ", i + 1, j + 1, newSeatArrayB[i][j]);
         }
     }
-
+    avgWaitingTime=totalWaitingTime /(double) Ncust;
+    avgServingTime=totalSupportTime /(double) Ncust;
+    avgSeatCancellation=(double) seatCancellation/ (double) Ncust;
+    avgCreditCancellation=(double) creditCancellation/ (double) Ncust;
+    avgSuccessTransact=(double) (Ncust - seatCancellation - creditCancellation) / (double) Ncust;
     printf("\nThe balance is: %d\n", balance);                      // Sunolika Esoda
-    printf("Average waiting Time: %f\n", totalWaitingTime / Ncust); // Mesos xronos anamwnhs pelatwn
-    printf("Average serving: %f\n", totalSupportTime / Ncust);      // mesos xronos ejhpiretisis pelatwn
-    printf("Amount of transactions cancelled because of lack of seats: %f\n", seatCancellation / Ncust);
-    printf("Amount of transactions cancelled because of credit card failure: %f\n", creditCancellation / Ncust);
-    successfulReservs = Ncust - seatCancellation - creditCancellation;
-    printf("Amount of successful transactions: %f\n", successfulReservs / Ncust);
+    printf("Average waiting Time in nanoSec: %.2lf\n", avgWaitingTime); // Mesos xronos anamwnhs pelatwn
+    printf("Average serving Time in nanoSec: %.2lf\n", avgServingTime);      // mesos xronos ejhpiretisis pelatwn
+    printf("Percentage of lack of seats cancelled transactions : %.2lf%\n", avgSeatCancellation * 100);
+    printf("Percentage of credit card failure cancelled transactions : %.2lf%\n", avgCreditCancellation * 100);
+    printf("Percentage of successful transactions: %.2lf%\n", avgSuccessTransact * 100);
 
     return 1;
 }
